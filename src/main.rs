@@ -1,6 +1,8 @@
 use pnet::datalink;
 use pnet::datalink::Channel::Ethernet;
-use pnet::packet::ethernet::EthernetPacket;
+use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
+use pnet::packet::ipv4::Ipv4Packet;
+use pnet::packet::Packet;
 use std::env;
 
 fn main() {
@@ -23,8 +25,18 @@ fn main() {
         match rx.next() {
             Ok(packet) => {
                 let packet = EthernetPacket::new(packet).unwrap();
-                println!("{:?}", packet);
+                if packet.get_ethertype() == EtherTypes::Ipv4 {
+                    let ipv4packet = Ipv4Packet::new(packet.payload()).unwrap();
+                    println!(
+                        "IPv4 packet: source {} destination {} => {} {}",
+                        ipv4packet.get_source(),
+                        ipv4packet.get_destination(),
+                        ipv4packet.get_next_level_protocol(),
+                        ipv4packet.get_total_length(),
+                    );
+                }
             }
+
             Err(e) => panic!("Erro ao coletar pacote: {}", e),
         }
     }
