@@ -1,32 +1,35 @@
-use packet_sniffer::sniffer;
+use app::App;
 use pnet::datalink;
+use pnet::datalink::Channel::Ethernet;
+use pnet::packet::arp::ArpPacket;
+use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
+use pnet::packet::ip::IpNextHeaderProtocols;
+use pnet::packet::ipv4::Ipv4Packet;
+use pnet::packet::ipv6::Ipv6Packet;
+use pnet::packet::tcp::TcpPacket;
+use pnet::packet::udp::UdpPacket;
+use pnet::packet::Packet;
 use std::env;
-use std::process; // Importa para sair do processo
 
+mod app;
 mod enums;
 mod packet_sniffer;
 
-fn main() { // main agora não retorna Result
-    // 1. Obtenção do nome da interface:
-    let args: Vec<String> = env::args().collect();
+fn main() -> color_eyre::Result<()> {
+    let interface_name = env::args().nth(1).unwrap();
 
-    let interface_name = match args.get(1) {
-        Some(name) => name.clone(),
-        None => {
-            eprintln!("Faltou o uso da interface:");
-            eprintln!("Exemplo: wirepenguin eth0");
-            process::exit(1); // Sai com código de erro 1
-        }
-    };
-
-    // 2. Localização da interface de rede:
     let interfaces = datalink::interfaces();
     let interface = interfaces
         .into_iter()
         .filter(|network_interface| network_interface.name == interface_name)
         .next()
-        .expect(&format!("Interface de rede '{}' não encontrada.", interface_name)); 
+        .unwrap();
 
-    sniffer(interface);
+    color_eyre::install()?;
+    let mut terminal = ratatui::init();
 
+    let mut app = App::new(interface);
+    let app_result = app.run(&mut terminal);
+    ratatui::restore();
+    app_result
 }

@@ -216,7 +216,6 @@ impl<'a> From<&Ipv4Packet<'a>> for Ipv4PacketInfo {
         }
     }
 }
-
 pub enum PacketsData {
     EthernetPacket(EthernetPacketInfo),
     ArpPacket(ArpPacketInfo),
@@ -234,7 +233,6 @@ pub struct CompletePacket {
     layer_2: Option<PacketsData>,
     layer_3: Option<PacketsData>,
 }
-
 impl CompletePacket {
     pub fn new(id: usize) -> Self {
         CompletePacket {

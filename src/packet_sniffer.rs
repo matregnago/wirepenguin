@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use pnet::{
     datalink::{self, Channel, NetworkInterface},
     packet::{
@@ -14,34 +16,33 @@ use pnet::{
     },
 };
 
-use crate::enums::{
-    ArpPacketInfo, CompletePacket, EthernetPacketInfo, IcmpPacketInfo, Icmpv6PacketInfo,
-    Ipv4PacketInfo, Ipv6PacketInfo, PacketsData, TcpPacketInfo, UdpPacketInfo,
+use crate::{
+    app::Event,
+    enums::{
+        ArpPacketInfo, CompletePacket, EthernetPacketInfo, IcmpPacketInfo, Icmpv6PacketInfo,
+        Ipv4PacketInfo, Ipv6PacketInfo, PacketsData, TcpPacketInfo, UdpPacketInfo,
+    },
 };
 
 fn handle_icmp_packet(icmp_packet: &IcmpPacket, complete_packet: &mut CompletePacket) {
     complete_packet.set_layer3_packet(Some(PacketsData::IcmpPacket(IcmpPacketInfo::from(
         icmp_packet,
     ))));
-    println!("ICMP Packet -> {:?}", icmp_packet);
 }
 fn handle_icmpv6_packet(icmpv6_packet: &Icmpv6Packet, complete_packet: &mut CompletePacket) {
     complete_packet.set_layer3_packet(Some(PacketsData::Icmpv6Packet(Icmpv6PacketInfo::from(
         icmpv6_packet,
     ))));
-    println!("ICMPv6 Packet -> {:?}", icmpv6_packet);
 }
 fn handle_tcp_packet(tcp_packet: &TcpPacket, complete_packet: &mut CompletePacket) {
     complete_packet.set_layer3_packet(Some(PacketsData::TcpPacket(TcpPacketInfo::from(
         tcp_packet,
     ))));
-    println!("TCP Packet -> {:?}", tcp_packet);
 }
 fn handle_udp_packet(udp_packet: &UdpPacket, complete_packet: &mut CompletePacket) {
     complete_packet.set_layer3_packet(Some(PacketsData::UdpPacket(UdpPacketInfo::from(
         udp_packet,
     ))));
-    println!("UDP Packet -> {:?}", udp_packet);
 }
 fn handle_ip_next_header_protocols(
     packet: &[u8],
@@ -100,7 +101,6 @@ fn handle_arp_packet(arp_packet: &ArpPacket, complete_packet: &mut CompletePacke
     complete_packet.set_layer2_packet(Some(PacketsData::ArpPacket(ArpPacketInfo::from(
         arp_packet,
     ))));
-    println!("ARP Packet -> {:?}", arp_packet);
 }
 
 fn handle_ethernet_packet(ethernet_packet: &EthernetPacket, complete_packet: &mut CompletePacket) {
@@ -130,7 +130,7 @@ fn handle_ethernet_packet(ethernet_packet: &EthernetPacket, complete_packet: &mu
     }
 }
 
-pub fn sniffer(network_interface: NetworkInterface) {
+pub fn sniffer(network_interface: NetworkInterface, tx: mpsc::Sender<Event>) {
     let (_, mut reciver) = match datalink::channel(&network_interface, Default::default()) {
         Ok(Channel::Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => panic!("Datalink channel criado é desconhecido."),
@@ -150,7 +150,8 @@ pub fn sniffer(network_interface: NetworkInterface) {
                     // let interface_name = &network_interface.name[..];
                     handle_ethernet_packet(&ethernet_packet, &mut complete_packet);
                 };
-                packets.push(complete_packet);
+                // packets.push(complete_packet);
+                tx.send(Event::PacketCaptured(complete_packet)).unwrap();
             }
             Err(e) => println!("Erro no reciver ao tentar coletar um pacote: {}", e),
         }

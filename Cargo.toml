@@ -5,5 +5,8 @@ edition = "2021"
 
 [dependencies]
 pnet = "0.35.0"
-ratatui = "0.29.0"
+color-eyre = "0.6.5"
+crossterm = "0.29.0"
+ratatui = { version = "0.28.0", features = ["termion"] }
 serde = "1.0.219"
+tokio = { version = "1", features = ["full"] }
