@@ -228,10 +228,10 @@ pub enum PacketsData {
 }
 
 pub struct CompletePacket {
-    id: usize,
-    layer_1: Option<PacketsData>,
-    layer_2: Option<PacketsData>,
-    layer_3: Option<PacketsData>,
+    pub id: usize,
+    pub layer_1: Option<PacketsData>,
+    pub layer_2: Option<PacketsData>,
+    pub layer_3: Option<PacketsData>,
 }
 impl CompletePacket {
     pub fn new(id: usize) -> Self {
@@ -242,6 +242,7 @@ impl CompletePacket {
             layer_3: None,
         }
     }
+
     pub fn set_layer1_packet(&mut self, packet: Option<PacketsData>) {
         self.layer_1 = packet;
     }

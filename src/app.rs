@@ -4,6 +4,7 @@ use crossterm::event::{KeyCode, KeyEventKind};
 use pnet::datalink::NetworkInterface;
 use ratatui::{
     layout::{Constraint, Layout, Margin, Rect},
+    text::Text,
     widgets::{
         Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
         Table, TableState,
@@ -11,13 +12,14 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-use crate::{enums::CompletePacket, packet_sniffer::sniffer};
+use crate::{
+    enums::{CompletePacket, PacketsData},
+    packet_sniffer::sniffer,
+};
 
 pub enum Event {
     Input(crossterm::event::KeyEvent),
-    SnifferToggle,
     PacketCaptured(CompletePacket),
-    FilterChanged,
 }
 
 pub struct App {
@@ -83,7 +85,6 @@ impl App {
             match self.action_rx.recv().unwrap() {
                 Event::PacketCaptured(packet) => self.packets.push(packet),
                 Event::Input(key_event) => self.handle_key_event(key_event).unwrap(),
-                _ => {}
             }
         }
         Ok(())
@@ -120,14 +121,35 @@ impl App {
             .map(Cell::from)
             .collect::<Row>()
             .height(1);
-        let rows = [
-            Row::new(vec!["Cell1", "Cell2"]),
-            Row::new(vec!["Cell3", "Cell4"]),
-        ];
+        let rows: Vec<Row> = self
+            .packets
+            .iter()
+            .enumerate()
+            .map(|(_, data)| {
+                if let Some(layer_3) = &data.layer_3 {
+                    let packet = match layer_3 {
+                        PacketsData::IcmpPacket(icmp_packet) => {
+                            format!("{} - {}", data.id, icmp_packet.length)
+                        }
+                        _ => String::new(),
+                    };
+                    Row::new(vec![Cell::from(packet)])
+                } else {
+                    Row::new(vec![Cell::from("")])
+                }
+            })
+            .collect();
         let widths = [Constraint::Length(5), Constraint::Length(5)];
+        let bar = " █ ";
         let table = Table::new(rows, widths)
             .header(header)
-            .block(Block::new().borders(Borders::ALL));
+            .block(Block::new().borders(Borders::ALL))
+            .highlight_symbol(Text::from(vec![
+                "".into(),
+                bar.into(),
+                bar.into(),
+                "".into(),
+            ]));
         frame.render_stateful_widget(table, area, &mut self.table_state);
     }
     fn render_chart(&mut self, frame: &mut Frame, area: Rect) {

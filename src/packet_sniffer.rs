@@ -138,7 +138,6 @@ pub fn sniffer(network_interface: NetworkInterface, tx: mpsc::Sender<Event>) {
     };
 
     let mut packet_id = 0;
-    let mut packets: Vec<CompletePacket> = Vec::new();
 
     loop {
         packet_id += 1;
