@@ -1,7 +1,13 @@
-use std::sync::mpsc;
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
+    time::Duration,
+};
 
 use pnet::{
-    datalink::{self, Channel, NetworkInterface},
+    datalink::{Channel, ChannelType, NetworkInterface},
     packet::{
         arp::ArpPacket,
         ethernet::{EtherTypes, EthernetPacket},
@@ -130,29 +136,64 @@ fn handle_ethernet_packet(ethernet_packet: &EthernetPacket, complete_packet: &mu
     }
 }
 
-pub fn sniffer(network_interface: NetworkInterface, tx: mpsc::Sender<Event>) {
-    let (_, mut reciver) = match datalink::channel(&network_interface, Default::default()) {
+pub fn sniffer(
+    network_interface: NetworkInterface,
+    tx: mpsc::Sender<Event>,
+    stop_signal: Arc<AtomicBool>,
+) {
+    let (_, mut receiver) = match pnet::datalink::channel(
+        &network_interface,
+        pnet::datalink::Config {
+            write_buffer_size: 4096,
+            read_buffer_size: 4096,
+            read_timeout: Some(Duration::new(1, 0)),
+            write_timeout: None,
+            channel_type: ChannelType::Layer2,
+            bpf_fd_attempts: 1000,
+            linux_fanout: None,
+            promiscuous: true,
+            socket_fd: None,
+        },
+    ) {
         Ok(Channel::Ethernet(tx, rx)) => (tx, rx),
-        Ok(_) => panic!("Datalink channel criado é desconhecido."),
-        Err(_) => panic!("Datalink channel criado é desconhecido."),
+        Ok(_) => {
+            eprintln!(
+                "Datalink channel for {} is an unknown type. Sniffer thread exiting.",
+                network_interface.name
+            );
+            return;
+        }
+        Err(e) => {
+            eprintln!(
+                "Error creating datalink channel for {}: {}. Sniffer thread exiting.",
+                network_interface.name, e
+            );
+            return;
+        }
     };
 
     let mut packet_id = 0;
 
     loop {
-        packet_id += 1;
-        match reciver.next() {
+        if stop_signal.load(Ordering::Relaxed) {
+            break;
+        }
+
+        match receiver.next() {
             Ok(packet) => {
+                packet_id += 1;
                 let mut complete_packet = CompletePacket::new(packet_id);
                 let ethernet_packet = EthernetPacket::new(packet);
                 if let Some(ethernet_packet) = ethernet_packet {
-                    // let interface_name = &network_interface.name[..];
                     handle_ethernet_packet(&ethernet_packet, &mut complete_packet);
                 };
-                // packets.push(complete_packet);
-                tx.send(Event::PacketCaptured(complete_packet)).unwrap();
+                tx.send(Event::PacketCaptured(complete_packet)).unwrap()
             }
-            Err(e) => println!("Erro no reciver ao tentar coletar um pacote: {}", e),
+            Err(e) => {
+                if e.kind() == std::io::ErrorKind::TimedOut {
+                    continue;
+                }
+            }
         }
     }
 }

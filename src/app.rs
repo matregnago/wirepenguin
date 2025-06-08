@@ -3,19 +3,27 @@ use crate::{
     packet_sniffer::sniffer,
 };
 use crossterm::event::{KeyCode, KeyEventKind};
-use pnet::datalink::NetworkInterface;
+use pnet::{
+    datalink::{self, NetworkInterface},
+    util::MacAddr,
+};
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Margin, Rect},
-    text::Text,
+    layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
+    style::{Color, Style},
+    text::{Line, Span, Text},
     widgets::{
-        Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        Block, Borders, Cell, Clear, Padding, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         ScrollbarState, Table, TableState,
     },
     DefaultTerminal, Frame,
 };
 use std::{
-    sync::mpsc,
-    thread,
+    net::IpAddr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
+    thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
@@ -29,12 +37,18 @@ pub struct App {
     exit: bool,
     table_state: TableState,
     scroll_state: ScrollbarState,
+    interfaces_table_state: TableState,
+    interfaces_scroll_state: ScrollbarState,
     packets: Vec<CompletePacket>,
     pub action_tx: mpsc::Sender<Event>,
     pub action_rx: mpsc::Receiver<Event>,
-    interface: NetworkInterface,
+    pub interface: Option<NetworkInterface>,
+    pub interfaces: Vec<NetworkInterface>,
     show_popup: bool,
+    sniffer_paused: bool,
     selected_popup_packet: Option<CompletePacket>,
+    sniffer_handle: Option<JoinHandle<()>>,
+    sniffer_stop_signal: Arc<AtomicBool>,
 }
 
 pub fn handle_input_events(tx: mpsc::Sender<Event>) {
@@ -49,18 +63,24 @@ pub fn handle_input_events(tx: mpsc::Sender<Event>) {
 }
 
 impl App {
-    pub fn new(network_interface: NetworkInterface) -> Self {
+    pub fn new() -> Self {
         let (action_tx, action_rx) = mpsc::channel();
         App {
             exit: false,
+            sniffer_paused: false,
             table_state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
+            interfaces_table_state: TableState::default().with_selected(0),
+            interfaces_scroll_state: ScrollbarState::new(0),
             packets: Vec::new(),
             action_tx,
             action_rx,
-            interface: network_interface,
+            interface: None,
+            interfaces: Vec::new(),
             show_popup: false,
             selected_popup_packet: None,
+            sniffer_handle: None,
+            sniffer_stop_signal: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -73,6 +93,14 @@ impl App {
                 KeyCode::Char('q') => self.exit = true,
                 KeyCode::Char('j') | KeyCode::Down => self.next_row(),
                 KeyCode::Char('k') | KeyCode::Up => self.previous_row(),
+                KeyCode::Char('i') => self.next_active_interface(),
+                KeyCode::Char('p') => {
+                    if !self.sniffer_paused {
+                        self.stop_sniffer();
+                    } else {
+                        self.start_sniffer();
+                    }
+                }
                 KeyCode::Enter => {
                     self.show_popup = !self.show_popup;
                     if let Some(selected_idx) = self.table_state.selected() {
@@ -85,14 +113,51 @@ impl App {
         Ok(())
     }
 
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> color_eyre::Result<()> {
+    pub fn stop_sniffer(&mut self) {
+        self.sniffer_stop_signal.store(true, Ordering::Relaxed);
+
+        if let Some(handle) = self.sniffer_handle.take() {
+            let _ = handle.join();
+        }
+        self.sniffer_paused = true;
+    }
+
+    fn start_sniffer(&mut self) {
         let tx_to_sniffer = self.action_tx.clone();
+        let interface = self.interface.clone().unwrap();
+        let stop_signal = Arc::new(AtomicBool::new(false));
+        self.sniffer_stop_signal = stop_signal.clone();
+        let handle = thread::spawn(move || {
+            sniffer(interface, tx_to_sniffer, stop_signal);
+        });
+
+        self.sniffer_handle = Some(handle);
+        self.sniffer_paused = false;
+    }
+
+    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> color_eyre::Result<()> {
         let tx_to_key_event_handler = self.action_tx.clone();
         let tx_to_draw_handler = self.action_tx.clone();
-        let interface_to_sniffer = self.interface.clone();
         let tick_rate = Duration::from_secs_f64(1.0 / 22.0);
 
-        thread::spawn(move || sniffer(interface_to_sniffer, tx_to_sniffer));
+        let interfaces = datalink::interfaces();
+        if interfaces.len() == 0 {
+            self.exit = true;
+        }
+        for intf in &interfaces {
+            if intf.is_up() && !intf.ips.is_empty() {
+                for ip in &intf.ips {
+                    if let IpAddr::V4(ipv4) = ip.ip() {
+                        if ipv4.is_private() && !ipv4.is_loopback() && !ipv4.is_unspecified() {
+                            self.interfaces.push(intf.clone());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        self.interface = self.interfaces.get(0).cloned();
+        self.start_sniffer();
         thread::spawn(move || handle_input_events(tx_to_key_event_handler));
         thread::spawn(move || {
             let mut last_tick = Instant::now();
@@ -142,6 +207,7 @@ impl App {
         self.render_scrollbar(frame, packets_area);
         self.render_chart(frame, chart_area);
         self.render_interfaces(frame, interfaces_area);
+        self.render_interfaces_scrollbar(frame, interfaces_area);
         if self.show_popup {
             let block = Block::bordered().title("Popup");
             let area = self.popup_area(frame.area(), 80, 80);
@@ -212,6 +278,19 @@ impl App {
                 horizontal: 1,
             }),
             &mut self.scroll_state,
+        );
+    }
+    fn render_interfaces_scrollbar(&mut self, frame: &mut Frame, area: Rect) {
+        frame.render_stateful_widget(
+            Scrollbar::default()
+                .orientation(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(None)
+                .end_symbol(None),
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 1,
+            }),
+            &mut self.interfaces_scroll_state,
         );
     }
     pub fn next_row(&mut self) {
@@ -368,9 +447,114 @@ impl App {
     }
 
     fn render_interfaces(&mut self, frame: &mut Frame, area: Rect) {
-        frame.render_widget(
-            Paragraph::new("Interfaces").block(Block::new().borders(Borders::ALL)),
-            area,
-        );
+        let table = self.make_table();
+        frame.render_widget(table, area);
+    }
+
+    fn make_table(&mut self) -> Table {
+        let header = Row::new(vec!["", "name", "mac", "ipv4", "ipv6"])
+            .style(Style::default().fg(Color::Yellow))
+            .height(1);
+        let mut rows = Vec::new();
+        for w in &self.interfaces {
+            let mut active = String::from("");
+            if self.interface.is_some() && self.interface.clone().unwrap() == *w {
+                active = String::from("*");
+            }
+            let name = if cfg!(windows) {
+                w.description.clone()
+            } else {
+                w.name.clone()
+            };
+            let mac = w.mac.unwrap_or(MacAddr::default()).to_string();
+            let ipv4: Vec<Line> = w
+                .ips
+                .iter()
+                .filter(|f| f.is_ipv4())
+                .cloned()
+                .map(|ip| {
+                    let ip_str = ip.ip().to_string();
+                    Line::from(vec![Span::styled(
+                        format!("{ip_str:<2}"),
+                        Style::default().fg(Color::Blue),
+                    )])
+                })
+                .collect();
+            let ipv6: Vec<Span> = w
+                .ips
+                .iter()
+                .filter(|f| f.is_ipv6())
+                .cloned()
+                .map(|ip| Span::from(ip.ip().to_string()))
+                .collect();
+
+            let mut row_height = 1;
+            if ipv4.len() > 1 {
+                row_height = ipv4.clone().len() as u16;
+            }
+            rows.push(
+                Row::new(vec![
+                    Cell::from(Span::styled(
+                        format!("{active:<1}"),
+                        Style::default().fg(Color::Red),
+                    )),
+                    Cell::from(Span::styled(
+                        format!("{name:<2}"),
+                        Style::default().fg(Color::Green),
+                    )),
+                    Cell::from(mac),
+                    Cell::from(ipv4.clone()),
+                    Cell::from(vec![Line::from(ipv6)]),
+                ])
+                .height(row_height),
+            );
+        }
+
+        let table = Table::new(
+            rows,
+            [
+                Constraint::Length(1),
+                Constraint::Length(8),
+                Constraint::Length(18),
+                Constraint::Length(14),
+                Constraint::Length(25),
+            ],
+        )
+        .header(header)
+        .block(
+            Block::default()
+                .title(Line::from(vec![
+                    Span::styled("|Inter", Style::default().fg(Color::Yellow)),
+                    Span::styled("f", Style::default().fg(Color::Red)),
+                    Span::styled("aces|", Style::default().fg(Color::Yellow)),
+                ]))
+                .border_style(Style::default().fg(Color::Rgb(100, 100, 100)))
+                .title_style(Style::default().fg(Color::Yellow))
+                .title_alignment(Alignment::Right)
+                .borders(Borders::ALL)
+                .padding(Padding::new(0, 0, 1, 0)),
+        )
+        .column_spacing(1);
+        table
+    }
+
+    fn next_active_interface(&mut self) {
+        self.stop_sniffer();
+
+        if self.interfaces.is_empty() {
+            self.interface = None;
+            self.interfaces_table_state.select(None);
+            return;
+        }
+
+        let current_selected_idx = self.interfaces_table_state.selected().unwrap_or(0);
+        let new_idx = (current_selected_idx + 1) % self.interfaces.len();
+
+        self.interfaces_table_state.select(Some(new_idx));
+        self.interface = self.interfaces.get(new_idx).cloned();
+
+        if self.interface.is_some() {
+            self.start_sniffer();
+        }
     }
 }
