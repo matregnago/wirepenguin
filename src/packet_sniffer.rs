@@ -157,17 +157,11 @@ pub fn sniffer(
     ) {
         Ok(Channel::Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => {
-            eprintln!(
-                "Datalink channel for {} is an unknown type. Sniffer thread exiting.",
-                network_interface.name
-            );
+            println!("Tipo desconhecido de datalink channel",);
             return;
         }
-        Err(e) => {
-            eprintln!(
-                "Error creating datalink channel for {}: {}. Sniffer thread exiting.",
-                network_interface.name, e
-            );
+        Err(_) => {
+            println!("Erro ao criar datalink channel");
             return;
         }
     };

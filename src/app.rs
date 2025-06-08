@@ -9,15 +9,16 @@ use pnet::{
 };
 use ratatui::{
     layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, Borders, Cell, Clear, Padding, Paragraph, Row, Scrollbar, ScrollbarOrientation,
-        ScrollbarState, Table, TableState,
+        BarChart, Block, Borders, Cell, Clear, Padding, Paragraph, Row, Scrollbar,
+        ScrollbarOrientation, ScrollbarState, Table, TableState,
     },
     DefaultTerminal, Frame,
 };
 use std::{
+    collections::HashMap,
     net::IpAddr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -439,20 +440,13 @@ impl App {
         frame.render_stateful_widget(table, area, &mut self.table_state.clone());
     }
 
-    fn render_chart(&mut self, frame: &mut Frame, area: Rect) {
-        frame.render_widget(
-            Paragraph::new("Gráfico").block(Block::new().borders(Borders::ALL)),
-            area,
-        );
-    }
-
     fn render_interfaces(&mut self, frame: &mut Frame, area: Rect) {
         let table = self.make_table();
         frame.render_widget(table, area);
     }
 
     fn make_table(&mut self) -> Table {
-        let header = Row::new(vec!["", "name", "mac", "ipv4", "ipv6"])
+        let header = Row::new(vec!["", "Nome", "MAC", "Ipv4", "Ipv6"])
             .style(Style::default().fg(Color::Yellow))
             .height(1);
         let mut rows = Vec::new();
@@ -556,5 +550,79 @@ impl App {
         if self.interface.is_some() {
             self.start_sniffer();
         }
+    }
+    fn get_last_layer_protocol_name(packet: &CompletePacket) -> Option<&'static str> {
+        if let Some(layer3) = &packet.layer_3 {
+            match layer3 {
+                PacketsData::TcpPacket(_) => Some("TCP"),
+                PacketsData::UdpPacket(_) => Some("UDP"),
+                PacketsData::IcmpPacket(_) => Some("ICMP"),
+                PacketsData::Icmpv6Packet(_) => Some("ICMPv6"),
+                _ => None,
+            }
+        } else if let Some(layer2) = &packet.layer_2 {
+            match layer2 {
+                PacketsData::ArpPacket(_) => Some("ARP"),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    fn render_chart(&mut self, frame: &mut Frame, area: Rect) {
+        let mut protocol_counts: HashMap<&'static str, u32> = HashMap::new();
+
+        for packet in &self.packets {
+            if let Some(protocol_name) = Self::get_last_layer_protocol_name(packet) {
+                *protocol_counts.entry(protocol_name).or_insert(0) += 1;
+            }
+        }
+
+        if protocol_counts.is_empty() {
+            let placeholder = Paragraph::new("Nenhum pacote capturado.")
+                .block(
+                    Block::default()
+                        .title("Pacotes Capturados")
+                        .borders(Borders::ALL),
+                )
+                .alignment(Alignment::Center);
+            frame.render_widget(placeholder, area);
+            return;
+        }
+
+        let mut sorted_protocols: Vec<&&str> = protocol_counts.keys().collect();
+        sorted_protocols.sort_unstable();
+
+        let chart_data: Vec<(&str, u64)> = sorted_protocols
+            .into_iter()
+            .map(|name| (*name, protocol_counts[name] as u64))
+            .collect();
+
+        let max_count = chart_data
+            .iter()
+            .map(|&(_, count)| count)
+            .max()
+            .unwrap_or(0);
+
+        let barchart = BarChart::default()
+            .block(
+                Block::default()
+                    .title("Pacotes Capturados")
+                    .borders(Borders::ALL),
+            )
+            .data(&chart_data)
+            .bar_width(5)
+            .bar_style(Style::default().fg(Color::LightCyan))
+            .value_style(
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::LightCyan)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .label_style(Style::default().fg(Color::White))
+            .max(max_count);
+
+        frame.render_widget(barchart, area);
     }
 }
