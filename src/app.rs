@@ -5,11 +5,11 @@ use crate::{
 use crossterm::event::{KeyCode, KeyEventKind};
 use pnet::datalink::NetworkInterface;
 use ratatui::{
-    layout::{Constraint, Layout, Margin, Rect},
+    layout::{Constraint, Flex, Layout, Margin, Rect},
     text::Text,
     widgets::{
-        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Table, TableState,
+        Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, Table, TableState,
     },
     DefaultTerminal, Frame,
 };
@@ -33,6 +33,8 @@ pub struct App {
     pub action_tx: mpsc::Sender<Event>,
     pub action_rx: mpsc::Receiver<Event>,
     interface: NetworkInterface,
+    show_popup: bool,
+    selected_popup_packet: Option<CompletePacket>,
 }
 
 pub fn handle_input_events(tx: mpsc::Sender<Event>) {
@@ -57,6 +59,8 @@ impl App {
             action_tx,
             action_rx,
             interface: network_interface,
+            show_popup: false,
+            selected_popup_packet: None,
         }
     }
 
@@ -69,10 +73,12 @@ impl App {
                 KeyCode::Char('q') => self.exit = true,
                 KeyCode::Char('j') | KeyCode::Down => self.next_row(),
                 KeyCode::Char('k') | KeyCode::Up => self.previous_row(),
-                // KeyCode::Char('i') => self.exit = true,
-                // KeyCode::Enter => self.exit = true,
-                // KeyCode::Up => self.exit = true,
-                // KeyCode::Down => self.exit = true,
+                KeyCode::Enter => {
+                    self.show_popup = !self.show_popup;
+                    if let Some(selected_idx) = self.table_state.selected() {
+                        self.selected_popup_packet = self.packets.get(selected_idx).cloned();
+                    }
+                }
                 _ => {}
             }
         }
@@ -84,7 +90,7 @@ impl App {
         let tx_to_key_event_handler = self.action_tx.clone();
         let tx_to_draw_handler = self.action_tx.clone();
         let interface_to_sniffer = self.interface.clone();
-        let tick_rate = Duration::from_secs_f64(1.0 / 22.0); // 60 FPS
+        let tick_rate = Duration::from_secs_f64(1.0 / 22.0);
 
         thread::spawn(move || sniffer(interface_to_sniffer, tx_to_sniffer));
         thread::spawn(move || handle_input_events(tx_to_key_event_handler));
@@ -96,11 +102,10 @@ impl App {
 
                 if elapsed >= tick_rate {
                     if tx_to_draw_handler.send(Event::Render).is_err() {
-                        break; // Canal fechado, sai do loop
+                        break;
                     }
                     last_tick = now;
                 } else {
-                    // Pequena pausa para não consumir 100% da CPU
                     thread::sleep(Duration::from_millis(1));
                 }
             }
@@ -118,6 +123,14 @@ impl App {
         Ok(())
     }
 
+    pub fn popup_area(&mut self, area: Rect, percent_x: u16, percent_y: u16) -> Rect {
+        let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
+        let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
+        let [area] = vertical.areas(area);
+        let [area] = horizontal.areas(area);
+        area
+    }
+
     fn draw(&mut self, frame: &mut Frame) {
         let vertical_layout =
             Layout::vertical([Constraint::Percentage(35), Constraint::Percentage(65)]);
@@ -129,6 +142,63 @@ impl App {
         self.render_scrollbar(frame, packets_area);
         self.render_chart(frame, chart_area);
         self.render_interfaces(frame, interfaces_area);
+        if self.show_popup {
+            let block = Block::bordered().title("Popup");
+            let area = self.popup_area(frame.area(), 80, 80);
+            let vertical_popup_area = Layout::vertical([
+                Constraint::Percentage(33),
+                Constraint::Percentage(33),
+                Constraint::Percentage(33),
+            ]);
+            let [layer3_info_area, layer2_info_area, layer1_info_area] =
+                vertical_popup_area.areas(area);
+            frame.render_widget(Clear, area);
+            frame.render_widget(block, area);
+            let popup_packet = &self.selected_popup_packet;
+            if let Some(packet) = popup_packet {
+                if let Some(layer1) = &packet.layer_1 {
+                    match layer1 {
+                        PacketsData::EthernetPacket(ethernet_packet) => {
+                            ethernet_packet.clone().render(layer1_info_area, frame)
+                        }
+                        _ => {}
+                    }
+                }
+
+                if let Some(layer2) = &packet.layer_2 {
+                    match layer2 {
+                        PacketsData::Ipv4Packet(ipv4_packet) => {
+                            ipv4_packet.clone().render(layer2_info_area, frame)
+                        }
+                        PacketsData::Ipv6Packet(ipv6_packet) => {
+                            ipv6_packet.clone().render(layer2_info_area, frame)
+                        }
+                        PacketsData::ArpPacket(arp_packet) => {
+                            arp_packet.clone().render(layer2_info_area, frame)
+                        }
+                        _ => {}
+                    }
+                }
+
+                if let Some(layer3) = &packet.layer_3 {
+                    match layer3 {
+                        PacketsData::TcpPacket(tcp_packet) => {
+                            tcp_packet.clone().render(layer3_info_area, frame)
+                        }
+                        PacketsData::UdpPacket(udp_packet) => {
+                            udp_packet.clone().render(layer3_info_area, frame)
+                        }
+                        PacketsData::IcmpPacket(icmp_packet) => {
+                            icmp_packet.clone().render(layer3_info_area, frame)
+                        }
+                        PacketsData::Icmpv6Packet(icmpv6_packet) => {
+                            icmpv6_packet.clone().render(layer3_info_area, frame)
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 
     fn render_scrollbar(&mut self, frame: &mut Frame, area: Rect) {
