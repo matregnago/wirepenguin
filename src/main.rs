@@ -1,7 +1,9 @@
 use app::App;
 mod app;
+mod components;
 mod enums;
-mod packet_sniffer;
+mod event;
+mod widgets;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
