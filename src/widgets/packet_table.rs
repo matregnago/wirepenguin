@@ -1,9 +1,9 @@
 use ratatui::{
-    layout::{Constraint, Margin, Rect},
+    layout::{Alignment, Constraint, Margin, Rect},
     text::Text,
     widgets::{
         Block, Borders, Cell, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
-        Table, TableState
+        Table, TableState,
     },
 };
 
@@ -63,18 +63,31 @@ impl PacketTableState {
 pub struct PacketTable<'a> {
     packets: &'a [CompletePacket],
     block: Option<Block<'a>>,
+    sniffer_paused: bool,
 }
 
 impl<'a> PacketTable<'a> {
-    pub fn new(packets: &'a [CompletePacket]) -> Self {
+    pub fn new(packets: &'a [CompletePacket], sniffer_paused: bool) -> Self {
         Self {
             packets,
             block: None,
+            sniffer_paused,
         }
     }
 
     pub fn block(mut self, block: Block<'a>) -> Self {
-        self.block = Some(block);
+        self.block = Some(
+            block
+                .title(format!(
+                    "Sniffer está {}",
+                    if self.sniffer_paused {
+                        "pausado."
+                    } else {
+                        "rodando."
+                    }
+                ))
+                .title_alignment(Alignment::Center),
+        );
         self
     }
 
@@ -85,14 +98,8 @@ impl<'a> PacketTable<'a> {
                     return Some([
                         complete_packet.id.to_string(),
                         "ARP".to_string(),
-                        format!(
-                            "{}",
-                             arp_packet.sender_hw_addr
-                        ),
-                        format!(
-                            "{}",
-                            arp_packet.target_hw_addr
-                        ),
+                        format!("{}", arp_packet.sender_hw_addr),
+                        format!("{}", arp_packet.target_hw_addr),
                         arp_packet.length.to_string(),
                     ]);
                 }

@@ -1,8 +1,7 @@
 use crate::packet_data::{CompletePacket, PacketsData};
 use ratatui::{
-    layout::Alignment,
     style::{Modifier, Style},
-    widgets::{BarChart, Block, Borders, Paragraph},
+    widgets::{BarChart, Block, Borders},
     Frame,
 };
 use std::collections::HashMap;
@@ -84,10 +83,7 @@ impl<'a> ChartWidget<'a> {
             .data(&chart_data)
             .bar_width(5)
             .bar_style(Style::default())
-            .value_style(
-                Style::default()
-                    .add_modifier(Modifier::BOLD),
-            )
+            .value_style(Style::default().add_modifier(Modifier::BOLD))
             .label_style(Style::default())
             .max(max_count)
     }

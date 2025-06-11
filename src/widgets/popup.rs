@@ -125,7 +125,12 @@ impl<'a> PopupWidget<'a> {
             })))
     }
 
-    fn render_ethernet_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::EthernetPacketInfo) {
+    fn render_ethernet_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::EthernetPacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("Ethernet".to_string(), title_area);
 
@@ -149,20 +154,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_arp_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::ArpPacketInfo) {
+    fn render_arp_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::ArpPacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("ARP".to_string(), title_area);
 
@@ -198,20 +206,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_ipv4_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::Ipv4PacketInfo) {
+    fn render_ipv4_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::Ipv4PacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("IPv4".to_string(), title_area);
 
@@ -247,20 +258,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_ipv6_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::Ipv6PacketInfo) {
+    fn render_ipv6_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::Ipv6PacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("IPv6".to_string(), title_area);
 
@@ -296,20 +310,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_tcp_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::TcpPacketInfo) {
+    fn render_tcp_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::TcpPacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("TCP".to_string(), title_area);
 
@@ -357,20 +374,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_udp_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::UdpPacketInfo) {
+    fn render_udp_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::UdpPacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("UDP".to_string(), title_area);
 
@@ -394,20 +414,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_icmp_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::IcmpPacketInfo) {
+    fn render_icmp_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::IcmpPacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("ICMP".to_string(), title_area);
 
@@ -431,20 +454,23 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);
     }
 
-    fn render_icmpv6_packet(&self, frame: &mut Frame, area: Rect, packet: &crate::packet_data::Icmpv6PacketInfo) {
+    fn render_icmpv6_packet(
+        &self,
+        frame: &mut Frame,
+        area: Rect,
+        packet: &crate::packet_data::Icmpv6PacketInfo,
+    ) {
         let (title_area, data_area) = self.create_packet_layout(area);
         let title = self.create_title_widget("ICMPv6".to_string(), title_area);
 
@@ -468,14 +494,12 @@ impl<'a> PopupWidget<'a> {
             ]),
         ];
 
-        let table = Table::new(rows, widths)
-            .column_spacing(2)
-            .block(
-                Block::default()
-                    .borders(Borders::LEFT)
-                    .border_style(Style::new().bold())
-                    .border_type(ratatui::widgets::BorderType::Thick),
-            );
+        let table = Table::new(rows, widths).column_spacing(2).block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .border_style(Style::new().bold())
+                .border_type(ratatui::widgets::BorderType::Thick),
+        );
 
         frame.render_widget(table, data_area);
         frame.render_widget(title, title_area);

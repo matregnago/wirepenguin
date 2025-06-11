@@ -102,7 +102,6 @@ impl<'a> From<&IcmpPacket<'a>> for IcmpPacketInfo {
     }
 }
 
-
 #[derive(Clone)]
 pub struct EthernetPacketInfo {
     pub destination: MacAddr,
@@ -215,7 +214,7 @@ impl<'a> From<&Ipv4Packet<'a>> for Ipv4PacketInfo {
         }
     }
 }
-    
+
 #[derive(Clone)]
 pub enum PacketsData {
     EthernetPacket(EthernetPacketInfo),

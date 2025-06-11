@@ -1,16 +1,13 @@
 use crate::{
-   sniffer::Sniffer,
-    packet_data::CompletePacket,
     event::Event,
+    packet_data::CompletePacket,
+    sniffer::Sniffer,
     widgets::{
-        charts::ChartWidget, interfaces::InterfacesWidget, layout_helper::LayoutHelper,
-        popup::PopupWidget,
+        charts::ChartWidget, footer::Footer, interfaces::InterfacesWidget, layout_helper::LayoutHelper, popup::PopupWidget
     },
 };
 use crossterm::event::{KeyCode, KeyEventKind};
-use pnet::{
-    datalink::{self, NetworkInterface},
-};
+use pnet::datalink::{self, NetworkInterface};
 use ratatui::{
     widgets::{ScrollbarState, TableState},
     DefaultTerminal, Frame,
@@ -117,7 +114,6 @@ impl App {
         self.sniffer.network_interface = self.interfaces.get(0).cloned();
         self.sniffer.register_event_handler(tx_to_sniffer);
         self.sniffer.start();
-
         Ok(())
     }
 
@@ -173,12 +169,13 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        let (top_area, packets_area) = LayoutHelper::create_main_layout(frame.area());
+        let (top_area, packets_area, footer_area) = LayoutHelper::create_main_layout(frame.area());
         let (chart_area, interfaces_area) = LayoutHelper::create_top_layout(top_area);
 
         self.render_sniffer(frame, packets_area);
         self.render_chart(frame, chart_area);
         self.render_interfaces(frame, interfaces_area);
+        self.render_footer(frame, footer_area);
 
         if self.show_popup {
             self.render_popup(frame);
@@ -192,6 +189,10 @@ impl App {
     fn render_chart(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
         let chart_widget = ChartWidget::new(&self.packets);
         chart_widget.render(frame, area);
+    }    
+    fn render_footer(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let footer = Footer::new();
+        footer.render(frame, area);
     }
 
     fn render_interfaces(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {

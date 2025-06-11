@@ -1,7 +1,7 @@
 use pnet::{datalink::NetworkInterface, util::MacAddr};
 use ratatui::{
     layout::{Alignment, Constraint, Margin},
-    style::{Style},
+    style::Style,
     text::{Line, Span},
     widgets::{
         Block, Borders, Cell, Padding, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
@@ -97,14 +97,8 @@ impl<'a> InterfacesWidget<'a> {
         let row_height = std::cmp::max(1, ipv4_lines.len() as u16);
 
         Row::new(vec![
-            Cell::from(Span::styled(
-                format!("{active:<1}"),
-                Style::default(),
-            )),
-            Cell::from(Span::styled(
-                format!("{name:<2}"),
-                Style::default(),
-            )),
+            Cell::from(Span::styled(format!("{active:<1}"), Style::default())),
+            Cell::from(Span::styled(format!("{name:<2}"), Style::default())),
             Cell::from(mac),
             Cell::from(ipv4_lines),
             Cell::from(vec![Line::from(ipv6_spans)]),
@@ -143,9 +137,10 @@ impl<'a> InterfacesWidget<'a> {
 
     fn build_block(&self) -> Block {
         Block::default()
-            .title(Line::from(vec![
-                Span::styled("Interfaces", Style::default()),
-            ]))
+            .title(Line::from(vec![Span::styled(
+                "Interfaces",
+                Style::default(),
+            )]))
             .border_style(Style::default())
             .title_style(Style::default())
             .title_alignment(Alignment::Right)

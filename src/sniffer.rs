@@ -279,7 +279,10 @@ impl Sniffer {
     }
 
     pub fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) {
-        let widget = PacketTable::new(&self.packets).block(Block::default().borders(Borders::ALL).title("Lista de pacotes"));
+        let widget = PacketTable::new(&self.packets, self.sniffer_paused.clone()).block(
+            Block::default()
+                .borders(Borders::ALL)
+        );
 
         frame.render_stateful_widget(widget, area, &mut self.packet_table_state);
     }
