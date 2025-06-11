@@ -1,7 +1,7 @@
-use crate::enums::{CompletePacket, PacketsData};
+use crate::packet_data::{CompletePacket, PacketsData};
 use ratatui::{
     layout::Alignment,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{BarChart, Block, Borders, Paragraph},
     Frame,
 };
@@ -17,27 +17,11 @@ impl<'a> ChartWidget<'a> {
     }
 
     pub fn render(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
-        if self.packets.is_empty() {
-            self.render_empty_chart(frame, area);
-            return;
-        }
-
         let protocol_counts = self.count_protocols();
         let chart_data = self.build_chart_data(protocol_counts);
         let barchart = self.build_barchart(chart_data);
 
         frame.render_widget(barchart, area);
-    }
-
-    fn render_empty_chart(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
-        let placeholder = Paragraph::new("Nenhum pacote capturado.")
-            .block(
-                Block::default()
-                    .title("Pacotes Capturados")
-                    .borders(Borders::ALL),
-            )
-            .alignment(Alignment::Center);
-        frame.render_widget(placeholder, area);
     }
 
     fn count_protocols(&self) -> HashMap<&'static str, u32> {
@@ -99,14 +83,12 @@ impl<'a> ChartWidget<'a> {
             )
             .data(&chart_data)
             .bar_width(5)
-            .bar_style(Style::default().fg(Color::LightCyan))
+            .bar_style(Style::default())
             .value_style(
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::LightCyan)
                     .add_modifier(Modifier::BOLD),
             )
-            .label_style(Style::default().fg(Color::White))
+            .label_style(Style::default())
             .max(max_count)
     }
 }

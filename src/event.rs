@@ -1,4 +1,4 @@
-use crate::enums::CompletePacket;
+use crate::packet_data::CompletePacket;
 
 pub enum Event {
     Input(crossterm::event::KeyEvent),

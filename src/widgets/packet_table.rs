@@ -3,12 +3,11 @@ use ratatui::{
     text::Text,
     widgets::{
         Block, Borders, Cell, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
-        Table, TableState, Widget,
+        Table, TableState
     },
-    Frame,
 };
 
-use crate::enums::{CompletePacket, PacketsData};
+use crate::packet_data::{CompletePacket, PacketsData};
 
 pub struct PacketTableState {
     pub table_state: TableState,
@@ -87,12 +86,12 @@ impl<'a> PacketTable<'a> {
                         complete_packet.id.to_string(),
                         "ARP".to_string(),
                         format!(
-                            "{} ({})",
-                            arp_packet.sender_proto_addr, arp_packet.sender_hw_addr
+                            "{}",
+                             arp_packet.sender_hw_addr
                         ),
                         format!(
-                            "{} ({})",
-                            arp_packet.target_proto_addr, arp_packet.target_hw_addr
+                            "{}",
+                            arp_packet.target_hw_addr
                         ),
                         arp_packet.length.to_string(),
                     ]);
@@ -195,10 +194,10 @@ impl<'a> StatefulWidget for PacketTable<'a> {
         if let Some(block) = self.block {
             table = table.block(block);
         } else {
-            table = table.block(Block::new().borders(Borders::ALL));
+            table = table.block(Block::new().borders(Borders::ALL).title("Lista de pacotes"));
         }
 
-        StatefulWidget::render(table, area, buf, &mut state.table_state);
+        StatefulWidget::render(table, area, buf, &mut state.table_state.clone());
         state.scroll_state = state.scroll_state.content_length(self.packets.len());
 
         let scrollbar = Scrollbar::default()

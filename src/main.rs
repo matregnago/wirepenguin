@@ -1,10 +1,9 @@
 use app::App;
 mod app;
-mod components;
-mod enums;
+mod sniffer;
 mod event;
 mod widgets;
-
+mod packet_data;
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let mut terminal = ratatui::init();

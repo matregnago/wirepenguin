@@ -1,7 +1,7 @@
 use pnet::{datalink::NetworkInterface, util::MacAddr};
 use ratatui::{
     layout::{Alignment, Constraint, Margin},
-    style::{Color, Style},
+    style::{Style},
     text::{Line, Span},
     widgets::{
         Block, Borders, Cell, Padding, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
@@ -51,7 +51,7 @@ impl<'a> InterfacesWidget<'a> {
 
     fn build_table(&self) -> Table {
         let header = Row::new(vec!["", "Nome", "MAC", "Ipv4", "Ipv6"])
-            .style(Style::default().fg(Color::Yellow))
+            .style(Style::default())
             .height(1);
 
         let rows = self.build_interface_rows();
@@ -80,7 +80,7 @@ impl<'a> InterfacesWidget<'a> {
 
     fn build_interface_row(&self, interface: &NetworkInterface) -> Row {
         let active = if self.is_current_interface(interface) {
-            "*"
+            ">"
         } else {
             ""
         };
@@ -99,11 +99,11 @@ impl<'a> InterfacesWidget<'a> {
         Row::new(vec![
             Cell::from(Span::styled(
                 format!("{active:<1}"),
-                Style::default().fg(Color::Red),
+                Style::default(),
             )),
             Cell::from(Span::styled(
                 format!("{name:<2}"),
-                Style::default().fg(Color::Green),
+                Style::default(),
             )),
             Cell::from(mac),
             Cell::from(ipv4_lines),
@@ -126,7 +126,7 @@ impl<'a> InterfacesWidget<'a> {
             .map(|ip| {
                 Line::from(vec![Span::styled(
                     format!("{:<2}", ip.ip()),
-                    Style::default().fg(Color::Blue),
+                    Style::default(),
                 )])
             })
             .collect();
@@ -144,12 +144,10 @@ impl<'a> InterfacesWidget<'a> {
     fn build_block(&self) -> Block {
         Block::default()
             .title(Line::from(vec![
-                Span::styled("|Inter", Style::default().fg(Color::Yellow)),
-                Span::styled("f", Style::default().fg(Color::Red)),
-                Span::styled("aces|", Style::default().fg(Color::Yellow)),
+                Span::styled("Interfaces", Style::default()),
             ]))
-            .border_style(Style::default().fg(Color::Rgb(100, 100, 100)))
-            .title_style(Style::default().fg(Color::Yellow))
+            .border_style(Style::default())
+            .title_style(Style::default())
             .title_alignment(Alignment::Right)
             .borders(Borders::ALL)
             .padding(Padding::new(0, 0, 1, 0))

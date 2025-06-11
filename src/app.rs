@@ -1,6 +1,6 @@
 use crate::{
-    components::sniffer::Sniffer,
-    enums::CompletePacket,
+   sniffer::Sniffer,
+    packet_data::CompletePacket,
     event::Event,
     widgets::{
         charts::ChartWidget, interfaces::InterfacesWidget, layout_helper::LayoutHelper,
