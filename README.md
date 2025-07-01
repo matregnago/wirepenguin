@@ -36,7 +36,6 @@ WirePenguin é um sniffer de pacotes de rede desenvolvido em Rust com interface 
 - **Bibliotecas principais:**
   - [`pnet`](https://github.com/libpnet/libpnet) - Captura e tratamento de pacotes
   - [`ratatui`](https://ratatui.rs/) - Interface gráfica no terminal
-  - [`tokio`](https://tokio.rs/) - Runtime assíncrono
   - [`crossterm`](https://github.com/crossterm-rs/crossterm) - Manipulação do terminal
 
 ## 📦 Instalação
@@ -62,15 +61,8 @@ cargo build --release
 
 Execute o programa com privilégios de administrador:
 
-### Linux/macOS
 ```bash
 sudo ./target/release/wirepenguin
-```
-
-### Windows
-```powershell
-# Execute como Administrador
-.\target\release\wirepenguin.exe
 ```
 
 ## ⌨️ Controles
@@ -141,7 +133,3 @@ wirepenguin/
 - [Wirefish](https://github.com/WirefishInc/wirefish)
 - [Netscanner](https://github.com/Chleba/netscanner)
 - [Oryx](https://github.com/pythops/oryx)
-
-## 📄 Licença
-
-Este projeto foi desenvolvido como trabalho acadêmico. Para informações sobre licenciamento, entre em contato com os autores.
